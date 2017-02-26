@@ -18,6 +18,7 @@ from wtforms.validators import Required
 from datetime import datetime 	
 from flask_sqlalchemy import SQLAlchemy 		#数据库
 
+from flask_debugtoolbar import DebugToolbarExtension   #Debug导航栏
 from werkzeug import generate_password_hash, check_password_hash
 												#登陆密码的加解密
 
@@ -31,7 +32,7 @@ app = Flask(__name__)					#创建一个Python实例
 manager=Manager(app)					#初始化主类的实例
 bootstrap=Bootstrap(app)
 moment=Moment(app)						#初始化Moment实例
-
+toolbar=DebugToolbarExtension(app)      #初始化debugtoolbar实例
 
 app.config['SECRET_KEY'] = '123qwe'
 app.config['SQLALCHEMY_DATABASE_URI'] = "sqlite:///test.db"
@@ -127,6 +128,6 @@ def internal_server_error(e):
 # 	'''
 
 if __name__ == '__main__':				#执行这个脚本时启动web服务器
-    # app.run(host='0.0.0.0',debug=True)					#启动服务器
-    manager.add_command("shell",Shell(make_context=make_shell_context))
-    manager.run()
+    app.run(host='0.0.0.0',debug=True)					#启动服务器
+    # manager.add_command("shell",Shell(make_context=make_shell_context))
+    # manager.run()
