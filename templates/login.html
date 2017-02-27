@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+{% import "bootstrap/wtf.html" as wtf %}	<!--bootstrap/wtf文件中定义了渲染表单的辅助函数-->
+
+{% block title %}登陆{% endblock %}	
+
+{% block page_content %}
+<div class="page-header">
+    <h1>Hello {% if user %}{{ user|capitalize }}{% else %}Stranger{% endif %}! please login.</h1>
+    {{ wtf.quick_form(form) }}
+    <!--使用jinja2中的条件语句格式进行渲染-->
+</div>
+{% endblock %}

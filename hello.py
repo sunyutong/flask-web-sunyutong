@@ -11,9 +11,9 @@ from flask_script import Manager	 			#解析指令行
 from flask_script import Shell 					#让flask的shell命令自动导入特定的对象
 from flask_bootstrap import Bootstrap 			#前端模板
 from flask_moment import Moment 				#本地化日期和时间
-from flask_wtf import Form 						#表单
-from wtforms import StringField, SubmitField
-from wtforms.validators import Required
+from forms import SignupForm, LoginForm,NameForm       #从forms.py中导入所有表单
+
+from flask import g
 
 from datetime import datetime 	
 from flask_sqlalchemy import SQLAlchemy 		#数据库
@@ -65,37 +65,73 @@ class User(db.Model):
 
 
 
-class NameForm(Form):					#创建一个继承Form表单的表单，Form是表单的始祖
-    name = StringField('What is your name?', validators=[Required()])
-    submit = SubmitField('Submit')
-    '''StringField类表示属性为type="text"的input元素。
-       SubmitField类表示属性为type="submit"的input元素。（表单中StringField等类见书P35）
-    第二个变量进行验证，required()函数确保字段中有数据'''		
+
+
+@app.before_request
+def check_user_status():
+    if 'user_email' not in session:
+        session['user_email'] = None
+        session['user_name'] = None
+
+
 
 @app.route('/',methods=['GET', 'POST'])							
 def index():								#该视图函数要渲染表单，也要接收表单中的数据
-    # user_agent=request.headers.get('User-Agent')
-    # response=make_response('<h1>This document carries a cookie</h1>')
-    # response.set_cookie('answer','42')
-    # return response
 
-    form = NameForm()
+    form = NameForm()   
+    if session['user_name']:
+        return render_template('index.html', user=session.get('user_name'),current_time=datetime.utcnow(), form=form)
+    
     if form.validate_on_submit():		#如果数据能被所有验证函数接受，即Required()通过验证，返回True
         user=User.query.filter_by(name=form.name.data).first()
         if user is None:
-        	user=User(name=form.name.data,email='',password='')
-        	db.session.add(user)
-        	db.session.commit()
-        session['name'] = form.name.data			#表单输入的内容存入name后清空
-        form.name.data = ''
+        	return redirect(url_for('signup'))
+        else:
+            session['user_name']=user.name
+            return redirect(url_for('login'))   
+    return render_template('index.html',current_time=datetime.utcnow(), form=form, user=session.get('user_name'))
+
+
+@app.route('/login',methods=['GET', 'POST'])
+def login():
+    if session['user_email']:
+        flash('you have been logged')
         return redirect(url_for('index'))
-    return render_template('index.html',current_time=datetime.utcnow(), form=form, name=session.get('name'),known=session.get('known',False))
+    form = LoginForm()
+    if session['user_name']:
+        return render_template('login.html',form=form,user=session.get('user_name'))
+    if form.validate_on_submit():
+        user=User.query.filter_by(email=form.email.data).first()
+        if user is not None and user.check_password(form.password.data):
+            session['user_email'] = form.email.data
+            session['user_name'] = user.name
+            flash('Thanks for logging in')
+            return redirect(url_for('index'))
+        else:
+            flash('Sorry! no user exists with this email and password')
+            return render_template('login.html',form=form)
+    return render_template('login.html',form=form, user=session.get('user_name'))
 
-@app.route('/account')
-def accout():
-	return render_template('account.html',name=name)
-
-
+@app.route('/signup', methods=('GET', 'POST'))
+def signup():
+    if session['user_email']:
+        flash('you are already signed up')
+        return redirect(url_for('index'))
+    form = SignupForm()
+    if form.validate_on_submit():
+        user_email = User.query.filter_by(email=form.email.data).first()
+        if user_email is None:
+            user = User(form.name.data, form.email.data, form.password.data)
+            db.session.add(user)
+            db.session.commit()
+            session['user_email'] = form.email.data
+            session['user_name'] = form.name.data
+            flash('Thanks for registering. You are now logged in!')
+            return redirect(url_for('index'))
+        else:
+            flash("A User with that email already exists. Choose another one!", 'error')
+            render_template('signup.html', form=form)
+    return render_template('signup.html', form=form)
 
 @app.errorhandler(404)
 def page_not_found(e):
@@ -106,26 +142,6 @@ def page_not_found(e):
 def internal_server_error(e):
     return render_template('500.html'), 500
 
-
-# @app.route('/user/<name>')				#设置路由 视图函数（/user/name）
-# def user(name):
-#     # return '<h1>hello,%s</h1>' % name
-#     return render_template('user.html',name=name)
-
-# @app.route('/test')
-# def test():
-# 	user = { 'nickname': 'Miguel' }
-# 	return '''
-# 	<html>
-#  	<head>
-#   	<title>Home Page</title>
-#  	</head>
-#  	<body>
-#   	<h1>Hello, ''' + user['nickname'] + '''</h1>
-#   	<h2></br>this is a web page</h2>
-#  	</body>
-# 	</html>
-# 	'''
 
 if __name__ == '__main__':				#执行这个脚本时启动web服务器
     app.run(host='0.0.0.0',debug=True)					#启动服务器
