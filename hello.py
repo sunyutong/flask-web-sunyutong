@@ -11,9 +11,8 @@ from flask_script import Manager	 			#解析指令行
 from flask_script import Shell 					#让flask的shell命令自动导入特定的对象
 from flask_bootstrap import Bootstrap 			#前端模板
 from flask_moment import Moment 				#本地化日期和时间
-from forms import SignupForm, LoginForm,NameForm       #从forms.py中导入所有表单
 
-from flask import g
+from forms import SignupForm, LoginForm,NameForm       #从forms.py中导入所有表单
 
 from datetime import datetime 	
 from flask_sqlalchemy import SQLAlchemy 		#数据库
@@ -26,7 +25,6 @@ from werkzeug import generate_password_hash, check_password_hash
 def make_shell_context():
 	return dict(app=app,db=db,User=User)
     
-
 
 app = Flask(__name__)					#创建一个Python实例
 manager=Manager(app)					#初始化主类的实例
@@ -63,10 +61,6 @@ class User(db.Model):
         return '<User %r>' % self.name
 
 
-
-
-
-
 @app.before_request
 def check_user_status():
     if 'user_email' not in session:
@@ -77,18 +71,15 @@ def check_user_status():
 
 @app.route('/',methods=['GET', 'POST'])							
 def index():								#该视图函数要渲染表单，也要接收表单中的数据
-
     form = NameForm()   
-    if session['user_name']:
-        return render_template('index.html', user=session.get('user_name'),current_time=datetime.utcnow(), form=form)
-    
     if form.validate_on_submit():		#如果数据能被所有验证函数接受，即Required()通过验证，返回True
         user=User.query.filter_by(name=form.name.data).first()
         if user is None:
-        	return redirect(url_for('signup'))
+            flash('please signup first!')
+            return redirect(url_for('signup'))
         else:
-            session['user_name']=user.name
-            return redirect(url_for('login'))   
+            flash('Hello,please login!')
+            return redirect(url_for('login'))
     return render_template('index.html',current_time=datetime.utcnow(), form=form, user=session.get('user_name'))
 
 
@@ -98,8 +89,6 @@ def login():
         flash('you have been logged')
         return redirect(url_for('index'))
     form = LoginForm()
-    if session['user_name']:
-        return render_template('login.html',form=form,user=session.get('user_name'))
     if form.validate_on_submit():
         user=User.query.filter_by(email=form.email.data).first()
         if user is not None and user.check_password(form.password.data):
@@ -110,7 +99,7 @@ def login():
         else:
             flash('Sorry! no user exists with this email and password')
             return render_template('login.html',form=form)
-    return render_template('login.html',form=form, user=session.get('user_name'))
+    return render_template('login.html',form=form)
 
 @app.route('/signup', methods=('GET', 'POST'))
 def signup():
@@ -132,6 +121,14 @@ def signup():
             flash("A User with that email already exists. Choose another one!", 'error')
             render_template('signup.html', form=form)
     return render_template('signup.html', form=form)
+
+
+@app.route('/logout', methods=('GET', 'POST'))
+def logout():
+    session.pop('user_email', None)
+    session.pop('user_name', None)
+    flash("You were successfully logged out")
+    return redirect(request.referrer or url_for('index'))
 
 @app.errorhandler(404)
 def page_not_found(e):
