@@ -1,6 +1,28 @@
 {% extends "base.html" %}
 {% import "bootstrap/wtf.html" as wtf %}	<!--bootstrap/wtf文件中定义了渲染表单的辅助函数-->
 
+
+{% block head %}
+{{ super() }}
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<title>无标题文档</title>
+ <script language="javascript">
+     var t = null;
+    t = setTimeout(time,1000);//开始执行
+    function time()
+    {
+       clearTimeout(t);//清除定时器
+       dt = new Date();
+       var h=dt.getHours();
+       var m=dt.getMinutes();
+       var s=dt.getSeconds();
+       document.getElementById("timeShow").innerHTML =  "时间：  "+h+"："+m+"："+s;
+       t = setTimeout(time,1000); //设定定时器，循环执行             
+    } 
+  </script>
+{% endblock %}
+
+
 {% block title %}问卷生成和管理{% endblock %}	
 
 {% block navbar %}
@@ -9,15 +31,20 @@
 
 {% block page_content %}
 <div class="page-header">
-	<h1>问卷生成和管理系统</h1>
-    
-    <h4>欢迎使用问卷生成和管理系统!</h4>
+	<div class="jumbotron">
+		<div class="container">
+  			<h2>问卷生成和管理系统</h2>
+  			<h5>欢迎使用问卷生成和管理系统!</h5>
+  			<!--<h5>时间：{{ moment(current_time).format('LLL') }}.</h5>-->
+  			<label id="timeShow"></lable>
+  		</div>
+	</div>  
     <!--使用jinja2中的条件语句格式进行渲染-->
 </div>
-<p>时间：{{ moment(current_time).format('LLL') }}.</p>		
+		
 <!--<p>That was {{ moment(current_time).fromNow(refresh=True) }}.</p>-->
 {% if user %}
-	<h4>您已登陆,可以查看我的问卷或创建问卷</h4>
+	<h4>~{{user}}已登陆</h4>
 {% else %}
 	{{ wtf.quick_form(form) }}	 		<!--bootstrap辅助函数 快速渲染表单-->
 {% endif %}

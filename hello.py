@@ -12,14 +12,16 @@ from flask_script import Shell 					#让flask的shell命令自动导入特定的
 from flask_bootstrap import Bootstrap 			#前端模板
 from flask_moment import Moment 				#本地化日期和时间
 
-from forms import SignupForm, LoginForm,NameForm       #从forms.py中导入所有表单
+from werkzeug import generate_password_hash, check_password_hash
+                                                #登陆密码的加解密
 
 from datetime import datetime 	
 from flask_sqlalchemy import SQLAlchemy 		#数据库
 
 from flask_debugtoolbar import DebugToolbarExtension   #Debug导航栏
-from werkzeug import generate_password_hash, check_password_hash
-												#登陆密码的加解密
+from forms import SignupForm, LoginForm,NameForm       #从forms.py中导入所有表单
+
+
 
 #让Script的Shell命令自动导入app,db,User对象												
 def make_shell_context():
@@ -38,11 +40,10 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS']=True
 db = SQLAlchemy(app)
 
 
-
 class User(db.Model):
     __tablename__ = 'user'
     id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(60))
+    name = db.Column(db.String(30))
     email = db.Column(db.String(60))
     password = db.Column(db.String(30))
 
@@ -57,11 +58,62 @@ class User(db.Model):
     def check_password(self, password):
         return check_password_hash(self.password, password)
 
-    def __repr__(self):					#__repr__返回一个具有可读性的字符串表示模型，调试和测试中使用
+    def __repr__(self):                 #__repr__返回一个具有可读性的字符串表示模型，调试和测试中使用
         return '<User %r>' % self.name
 
+class Paper(db.Model):
+    __tablename__ = 'paper'
+    id = db.Column(db.Integer, primary_key=True)
+    paper_title = db.Column(db.String(30))
+    paper_description = db.Column(db.String(120))
+    paper_deadline = db.Column(db.String(60))       #有待调整
+    user_id = db.Column(db.Integer,ForeignKey('user.id'))
+    # user.id  外键 用户编号
+    
+    def __repr__(self):                 #__repr__返回一个具有可读性的字符串表示模型，调试和测试中使用
+        return '<Paper %r>' % self.name
 
-@app.before_request
+
+
+class Question(db.Model):
+    __tablename__ = 'question'
+    id = db.Column(db.Integer, primary_key=True)
+    question_content = db.Column(db.String(240))
+    paper_id = db.Column(db.Integer,ForeignKey('paper.id'))   
+    #paper.id 外键 问卷编号
+    #
+    #
+    def __repr__(self):                 #__repr__返回一个具有可读性的字符串表示模型，调试和测试中使用
+        return '<Question %r>' % self.name
+
+
+
+class Select(db.Model):
+    __tablename__ = 'select'
+    id = db.Column(db.Integer, primary_key=True)
+    question_id = db.Column(db.Integer,ForeignKey('question.id'))
+    #question.id 外键 问卷编号
+    select_content = db.Column(db.String(60))
+    def __repr__(self):                 #__repr__返回一个具有可读性的字符串表示模型，调试和测试中使用
+        return '<Select %r>' % self.name
+
+class Answer(db.Model):
+    __tablename__ = 'answer'
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer,ForeignKey('user.id'))
+    question_id = db.Column(db.Integer,ForeignKey('question.id'))
+    #user.id 外键 用户编号
+    #question.id 外键 问题编号
+    answer_content = db.Column(db.String(4))
+    
+    def __repr__(self):                 #__repr__返回一个具有可读性的字符串表示模型，调试和测试中使用
+        return '<Answer %r>' % self.name
+
+
+
+
+
+@app.before_request                        #注册一个函数，在每次请求之前运行
 def check_user_status():
     if 'user_email' not in session:
         session['user_email'] = None
