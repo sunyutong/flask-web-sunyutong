@@ -1,6 +1,6 @@
 from flask_wtf import FlaskForm
-from wtforms import PasswordField, StringField,SubmitField
-from wtforms.validators import Email, Length, EqualTo, DataRequired,Required
+from wtforms import PasswordField, StringField,SubmitField,IntegerField,DateField
+from wtforms.validators import Email, Length, EqualTo, DataRequired,Required,NumberRange
 
 
 
@@ -24,4 +24,11 @@ class SignupForm(FlaskForm):
         EqualTo('confirm', message='Passwords must match')
     ])
     confirm = PasswordField('Repeat Password')
+    submit = SubmitField('Submit')
+
+class PaperCreateForm(FlaskForm):
+    paper_title = StringField('问卷名称', validators=[Required()])
+    question_num = IntegerField('问题数量',validators=[NumberRange(min=1,max=30)])
+    # paper_description = StringField('问卷描述',validators=[DataRequired()])
+    # paper_deadline = DateField('截止日期',validators=[DataRequired()])
     submit = SubmitField('Submit')

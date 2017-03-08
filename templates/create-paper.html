@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% import "bootstrap/wtf.html" as wtf %}	<!--bootstrap/wtf文件中定义了渲染表单的辅助函数-->
+
+{% block title %}创建问卷{% endblock %}	
+
+{% block page_content %}
+<div class="page-header">
+	<h2>创建问卷</h2>
+</div>
+    {{ wtf.quick_form(form) }}
+
+<hr>
+
+{% endblock %}

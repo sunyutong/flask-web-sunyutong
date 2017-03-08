@@ -17,15 +17,17 @@ from werkzeug import generate_password_hash, check_password_hash
 
 from datetime import datetime 	
 from flask_sqlalchemy import SQLAlchemy 		#数据库
+from sqlalchemy import Column,Integer,String,ForeignKey
+
 
 from flask_debugtoolbar import DebugToolbarExtension   #Debug导航栏
-from forms import SignupForm, LoginForm,NameForm       #从forms.py中导入所有表单
+from forms import SignupForm, LoginForm,NameForm,PaperCreateForm       #从forms.py中导入所有表单
 
 
 
 #让Script的Shell命令自动导入app,db,User对象												
 def make_shell_context():
-	return dict(app=app,db=db,User=User)
+	return dict(app=app,db=db,User=User,Paper=Paper)
     
 
 app = Flask(__name__)					#创建一个Python实例
@@ -46,6 +48,7 @@ class User(db.Model):
     name = db.Column(db.String(30))
     email = db.Column(db.String(60))
     password = db.Column(db.String(30))
+    papers = db.relationship('Paper',backref='author', lazy='dynamic')
 
     def __init__(self, name, email, password):
         self.name = name
@@ -61,31 +64,33 @@ class User(db.Model):
     def __repr__(self):                 #__repr__返回一个具有可读性的字符串表示模型，调试和测试中使用
         return '<User %r>' % self.name
 
+
 class Paper(db.Model):
     __tablename__ = 'paper'
     id = db.Column(db.Integer, primary_key=True)
     paper_title = db.Column(db.String(30))
-    paper_description = db.Column(db.String(120))
-    paper_deadline = db.Column(db.String(60))       #有待调整
-    user_id = db.Column(db.Integer,ForeignKey('user.id'))
-    # user.id  外键 用户编号
-    
-    def __repr__(self):                 #__repr__返回一个具有可读性的字符串表示模型，调试和测试中使用
-        return '<Paper %r>' % self.name
+    # paper_description = db.Column(db.String(120))
+    # paper_deadline = db.Column(db.String(60))       #有待调整
+    user_id = db.Column(db.Integer,db.ForeignKey('user.id'))
 
+    # def __init__(self, paper_title,user_id):
+    #     self.paper_title = paper_title
+    #     self.user_id = user.id
+  
+    def __repr__(self):                 #__repr__返回一个具有可读性的字符串表示模型，调试和测试中使用
+        return '<Paper %r>' % self.paper_title
 
 
 class Question(db.Model):
     __tablename__ = 'question'
     id = db.Column(db.Integer, primary_key=True)
     question_content = db.Column(db.String(240))
-    paper_id = db.Column(db.Integer,ForeignKey('paper.id'))   
+    # paper_id = db.Column(db.Integer,ForeignKey('paper.id'))   
     #paper.id 外键 问卷编号
-    #
-    #
+    
+    
     def __repr__(self):                 #__repr__返回一个具有可读性的字符串表示模型，调试和测试中使用
-        return '<Question %r>' % self.name
-
+        return '<Question %r>' % self.question_content
 
 
 class Select(db.Model):
@@ -95,7 +100,8 @@ class Select(db.Model):
     #question.id 外键 问卷编号
     select_content = db.Column(db.String(60))
     def __repr__(self):                 #__repr__返回一个具有可读性的字符串表示模型，调试和测试中使用
-        return '<Select %r>' % self.name
+        return '<Select %r>' % self.id
+
 
 class Answer(db.Model):
     __tablename__ = 'answer'
@@ -107,7 +113,7 @@ class Answer(db.Model):
     answer_content = db.Column(db.String(4))
     
     def __repr__(self):                 #__repr__返回一个具有可读性的字符串表示模型，调试和测试中使用
-        return '<Answer %r>' % self.name
+        return '<Answer %r>' % self.id
 
 
 
@@ -182,6 +188,28 @@ def logout():
     flash("You were successfully logged out")
     return redirect(request.referrer or url_for('index'))
 
+
+@app.route('/createpaper', methods=('GET', 'POST'))
+def createpaper():
+    if session['user_email'] is None:
+        flash('please login')
+        return redirect(url_for('login'))
+    user=User.query.filter_by(email=session.get('user_email')).first()
+    form = PaperCreateForm()
+    if form.validate_on_submit():
+        paper_title = Paper.query.filter_by(paper_title=form.paper_title.data).first()
+        if paper_title is None:
+            paper = Paper(paper_title=form.paper_title.data,author=user)
+            db.session.add(paper)
+            db.session.commit()
+            flash("Success to create a paper !")
+            return render_template('create-paper.html')
+        else:
+            flash("A paper already exists.")
+            return render_template('create-paper.html')
+    return render_template('create-paper.html',form=form)
+
+
 @app.errorhandler(404)
 def page_not_found(e):
     return render_template('404.html'), 404
@@ -193,6 +221,6 @@ def internal_server_error(e):
 
 
 if __name__ == '__main__':				#执行这个脚本时启动web服务器
-    app.run(host='0.0.0.0',debug=True)					#启动服务器
-    # manager.add_command("shell",Shell(make_context=make_shell_context))
-    # manager.run()
+    # app.run(host='0.0.0.0',debug=True)					#启动服务器
+    manager.add_command("shell",Shell(make_context=make_shell_context))
+    manager.run()
