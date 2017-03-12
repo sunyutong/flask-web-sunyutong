@@ -9,7 +9,7 @@ class NameForm(FlaskForm):					#创建一个继承Form表单的表单，Form是�
     submit = SubmitField('Submit')
     '''StringField类表示属性为type="text"的input元素。
        SubmitField类表示属性为type="submit"的input元素。（表单中StringField等类见书P35）
-       第二个变量进行验证，required()函数确保字段中有数据'''	
+       第二个变量进行验证，required()函数确保字段中有数据'''
 
 class LoginForm(FlaskForm):
     email = StringField('email', validators=[DataRequired(), Email()])
@@ -32,3 +32,6 @@ class PaperCreateForm(FlaskForm):
     # paper_description = StringField('问卷描述',validators=[DataRequired()])
     # paper_deadline = DateField('截止日期',validators=[DataRequired()])
     submit = SubmitField('Submit')
+
+class QuestionCreateForm(FlaskForm):
+    question_content = StringField('题干'，validators=[Required()])
