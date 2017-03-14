@@ -1,4 +1,5 @@
 import os
+from func import sms
 from flask import Flask
 from flask import session 						#用户会话
 from flask import redirect						#重定向
@@ -46,13 +47,15 @@ class User(db.Model):
     __tablename__ = 'user'
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(30))
-    email = db.Column(db.String(60))
+    stu_num = db.Column(db.String(12))
+    phone_num = db.Column(db.String(11))
     password = db.Column(db.String(30))
     papers = db.relationship('Paper',backref='author', lazy='dynamic')
 
-    def __init__(self, name, email, password):
+    def __init__(self, name, stu_num,phone_num, password):
         self.name = name
-        self.email = email
+        self.stu_num = stu_num
+        self.phone_num = phone_num
         self.set_password(password)
 
     def set_password(self, password):
@@ -123,8 +126,8 @@ class Answer(db.Model):
 
 @app.before_request                        #注册一个函数，在每次请求之前运行
 def check_user_status():
-    if 'user_email' not in session:
-        session['user_email'] = None
+    if 'user_num' not in session:
+        session['user_num'] = None
         session['user_name'] = None
 
 
@@ -145,47 +148,73 @@ def index():								#该视图函数要渲染表单，也要接收表单中的�
 
 @app.route('/login',methods=['GET', 'POST'])
 def login():
-    if session['user_email']:
+    if session['user_num']:
         flash('you have been logged')
         return redirect(url_for('index'))
     form = LoginForm()
     if form.validate_on_submit():
-        user=User.query.filter_by(email=form.email.data).first()
+        user=User.query.filter_by(stu_num=form.stu_num.data).first()
         if user is not None and user.check_password(form.password.data):
-            session['user_email'] = form.email.data
+            session['user_num'] = form.stu_num.data
             session['user_name'] = user.name
             flash('Thanks for logging in')
             return redirect(url_for('index'))
         else:
-            flash('Sorry! no user exists with this email and password')
+            flash('Sorry! no user exists with this student number and password')
             return render_template('login.html',form=form)
     return render_template('login.html',form=form)
 
 @app.route('/signup', methods=('GET', 'POST'))
 def signup():
-    if session['user_email']:
+
+    if session['user_num']:
         flash('you are already signed up')
         return redirect(url_for('index'))
+        
     form = SignupForm()
-    if form.validate_on_submit():
-        user_email = User.query.filter_by(email=form.email.data).first()
-        if user_email is None:
-            user = User(form.name.data, form.email.data, form.password.data)
-            db.session.add(user)
-            db.session.commit()
-            session['user_email'] = form.email.data
-            session['user_name'] = form.name.data
-            flash('Thanks for registering. You are now logged in!')
-            return redirect(url_for('index'))
+    if request.method == 'GET':
+    # 获取 GET 请求参数
+        phone_number = request.args.get('mobile_phone_number')
+        if phone_number is not None:
+            if sms.send_message(phone_number):
+                return render_template('signup.html',form=form)
+            else:
+                flash('获取验证码失败！')
+    elif request.method == 'POST':
+        if form.validate_on_submit():
+            user_num = User.query.filter_by(stu_num=form.stu_num.data).first()
+            if user_num is None:
+                phone_number = form.phone_number.data
+                code =form.code.data
+                if code == '':
+                    flash('请输入验证码！')
+                elif sms.verify(phone_number, code):
+                    name = form.name.data
+                    stu_num = form.stu_num.data
+                    password = form.password.data
+                    user = User(name,stu_num,phone_number,password)
+                    db.session.add(user)
+                    db.session.commit()
+                    session['user_num']=stu_num
+                    session['user_name']=name
+                    flash("注册成功！")
+                    return redirect(url_for('index'))
+                else:
+                    flash('验证码有误，请重新输入！')
+                    return render_template('signup.html', form=form)
+            else:
+                flash("该学号已经注册！", 'error')
+                return render_template('signup.html', form=form)
         else:
-            flash("A User with that email already exists. Choose another one!", 'error')
-            render_template('signup.html', form=form)
-    return render_template('signup.html', form=form)
-
+            flash("请输入正确信息")
+            return render_template('signup.html', form=form)
+    return render_template('signup.html',form=form)
+    
+    
 
 @app.route('/logout', methods=('GET', 'POST'))
 def logout():
-    session.pop('user_email', None)
+    session.pop('user_num', None)
     session.pop('user_name', None)
     flash("You were successfully logged out")
     return redirect(request.referrer or url_for('index'))
@@ -193,11 +222,10 @@ def logout():
 
 @app.route('/createpaper', methods=('GET', 'POST'))
 def createpaper():
-    if session['user_email'] is None:
+    if session['user_num'] is None:
         flash('please login')
         return redirect(url_for('login'))
-    user=User.query.filter_by(email=session.get('user_email')).first()
-
+    user=User.query.filter_by(stu_num=session.get('user_num')).first()
     form = PaperCreateForm()
     if form.validate_on_submit():
         paper_title = Paper.query.filter_by(paper_title=form.paper_title.data).first()
@@ -211,8 +239,6 @@ def createpaper():
         else:
             flash("A paper already exists.")
             return render_template('create-paper.html',form=form)
-
-
     return render_template('create-paper.html',form=form)
 
 
