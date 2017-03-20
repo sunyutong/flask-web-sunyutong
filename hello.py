@@ -233,13 +233,27 @@ def createpaper():
             paper = Paper(paper_title=form.paper_title.data,question_num=form.question_num.data,author=user)
             db.session.add(paper)
             db.session.commit()
-            flash("Success to create a paper !")
-			
-            return render_template('create-paper.html',form=form)
+            session['paper_title'] = form.paper_title.data			
+            return redirect(url_for('createquestion'))
         else:
             flash("A paper already exists.")
             return render_template('create-paper.html',form=form)
     return render_template('create-paper.html',form=form)
+
+
+
+@app.route('/createpaper/createquestion',methods=('GET','POST'))
+def createquestion():
+    if session['user_num'] is None:
+        flash('please login')
+        return redirect(url_for('login'))
+
+    paper = Paper.query.filter_by(paper_title = session.get('paper_title')).first()
+
+
+    return render_template('create-question.html',paper_title=paper.paper_title,question_num=paper.question_num)
+
+
 
 
 @app.errorhandler(404)

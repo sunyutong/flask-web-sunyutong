@@ -13,7 +13,7 @@ class NameForm(FlaskForm):					#创建一个继承Form表单的表单，Form是�
 
 class LoginForm(FlaskForm):
     stu_num = StringField('学号', validators=[DataRequired(), Length(min=7, max=12)])
-    password = StringField('密码', validators=[DataRequired()])
+    password = PasswordField('密码', validators=[DataRequired()])
     submit = SubmitField('提交')
 
 class SignupForm(FlaskForm):
