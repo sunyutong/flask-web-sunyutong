@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{% import "bootstrap/wtf.html" as wtf %}	<!--bootstrap/wtf文件中定义了渲染表单的辅助函数-->
+
+{% block title %}创建问卷{% endblock %}	
+
+<!-- {% block head %}
+{{ super() }}
+<meta charset="UTF-8">
+
+<script type="text/javascript">
+		public string GetUrl()
+		{
+   			return "form-control";
+		}
+</script>
+{% endblock %} -->
+
+
+
+{% block page_content %}
+<div class="page-header">
+	<h2>创建问卷</h2>
+</div>
+
+	<h4>问卷名称：{{paper_title}}</h4>
+	<h4>题目数量：{{question_num}}</h4>
+
+<!-- 	<form method="POST">
+		{% for field in form if field.widget.input_type != 'hidden' %}
+		{{  field.label  }} {{  field  }} <br>
+		{% endfor %}
+	</form> -->
+
+
+
+	<form method="POST">
+		{{ form.hidden_tag() }}
+		{% for field in form if field.widget.input_type != 'hidden' %}
+		<p>{{  field.label  }}<br>
+		{{ field(class="form-control") }}
+		{% endfor %}
+	</form>
+
+
+{% endblock %}
